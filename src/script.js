@@ -13,17 +13,62 @@ let plane;
 let pointer,
   raycaster,
   isShiftDown = false;
-
-let rollOverMesh, rollOverMaterial;
-let cubeGeo, cubeMaterial;
 let clock;
 let controls;
-let blockCreator = new BlockCreator();
+let blockCreator;
 
 const objects = [];
 
 init();
 animate();
+
+function initSceneObjects(scene) {
+  // grid
+
+  const gridHelper = new THREE.GridHelper(10000, 100);
+  scene.add(gridHelper);
+
+  const geometry = new THREE.PlaneGeometry(10000, 10000);
+  geometry.rotateX(-Math.PI / 2);
+
+  plane = new THREE.Mesh(
+    geometry,
+    new THREE.MeshBasicMaterial({ color: 0xff0000, visible: false })
+  );
+  scene.add(plane);
+  const lineXMaterial = new THREE.LineBasicMaterial({color:0xff0000})
+  const lineYMaterial = new THREE.LineBasicMaterial({color:0x00ff00})
+  const lineZMaterial = new THREE.LineBasicMaterial({color:0x0000ff})
+
+  const lineXPoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0)]
+  const lineYPoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 100, 0)]
+  const lineZPoints = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 100)]
+
+  const lineXGeo = new THREE.BufferGeometry().setFromPoints(lineXPoints)
+  const lineYGeo = new THREE.BufferGeometry().setFromPoints(lineYPoints)
+  const lineZGeo = new THREE.BufferGeometry().setFromPoints(lineZPoints)
+
+  const lineX = new THREE.Line(lineXGeo, lineXMaterial)
+  const lineY = new THREE.Line(lineYGeo, lineYMaterial)
+  const lineZ = new THREE.Line(lineZGeo, lineZMaterial)
+
+  scene.add(lineX)
+  scene.add(lineY)
+  scene.add(lineZ)
+
+  objects.push(lineX, lineY, lineZ)
+
+  objects.push(plane);
+
+  // lights
+
+  const ambientLight = new THREE.AmbientLight(0x606060);
+  scene.add(ambientLight);
+
+  const directionalLight = new THREE.DirectionalLight(0xffffff);
+  directionalLight.position.set(1, 0.75, 0.5).normalize();
+  scene.add(directionalLight);
+}
 
 function init() {
   camera = new THREE.PerspectiveCamera(
@@ -37,57 +82,12 @@ function init() {
   clock = new THREE.Clock();
 
   scene = new THREE.Scene();
+  blockCreator = new BlockCreator(scene);
   scene.background = new THREE.Color(0xf0f0f0);
-
-  // roll-over helpers
-
-  const rollOverGeo = new THREE.BoxGeometry(50, 50, 50);
-  rollOverMaterial = new THREE.MeshBasicMaterial({
-    color: 0x0000ff,
-    opacity: 0.7,
-    transparent: true,
-  });
-  rollOverMesh = new THREE.Mesh(rollOverGeo, rollOverMaterial);
-  rollOverMesh.position.addScalar(25);
-//   scene.add(rollOverMesh);
-
-  // cubes
-
-  cubeGeo = new THREE.BoxGeometry(50, 50, 50);
-  cubeMaterial = new THREE.MeshLambertMaterial({
-    color: 0xfeb74c,
-    map: new THREE.TextureLoader().load("square-outline-textured.png"),
-  });
-
-  // grid
-
-  const gridHelper = new THREE.GridHelper(10000, 200);
-  scene.add(gridHelper);
-
-  //
-
   raycaster = new THREE.Raycaster();
   pointer = new THREE.Vector2();
 
-  const geometry = new THREE.PlaneGeometry(10000, 10000);
-  geometry.rotateX(-Math.PI / 2);
-
-  plane = new THREE.Mesh(
-    geometry,
-    new THREE.MeshBasicMaterial({ visible: false })
-  );
-  scene.add(plane);
-
-  objects.push(plane);
-
-  // lights
-
-  const ambientLight = new THREE.AmbientLight(0x606060);
-  scene.add(ambientLight);
-
-  const directionalLight = new THREE.DirectionalLight(0xffffff);
-  directionalLight.position.set(1, 0.75, 0.5).normalize();
-  scene.add(directionalLight);
+  initSceneObjects(scene)
 
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(window.devicePixelRatio);
@@ -124,16 +124,7 @@ function onPointerMove(event) {
   );
 
   raycaster.setFromCamera(pointer, camera);
-
-  const intersects = raycaster.intersectObjects(objects);
-
-  if (intersects.length > 0) {
-    const intersect = intersects[0];
-
-    // rollOverMesh.position.copy(intersect.point).add(intersect.face.normal);
-    // rollOverMesh.position.addScalar(25);
-    blockCreator.update(intersect);
-  }
+  blockCreator.update(raycaster);
   render();
 }
 
@@ -149,22 +140,18 @@ function onPointerDown(event) {
 
   if (intersects.length > 0) {
     const intersect = intersects[0];
-
-    // delete cube
-
     if (isShiftDown) {
+      // delete cube
       if (intersect.object !== plane) {
         scene.remove(intersect.object);
-
         objects.splice(objects.indexOf(intersect.object), 1);
       }
-
-      // create cube
     } else {
-      const voxel = blockCreator.click(intersect, cubeGeo, cubeMaterial);
-      if (voxel) {
-        scene.add(voxel);
-        objects.push(voxel);
+      // create cube
+      const cube = blockCreator.click(intersects);
+      if (cube) {
+        scene.add(cube);
+        objects.push(cube);
       }
     }
   }
