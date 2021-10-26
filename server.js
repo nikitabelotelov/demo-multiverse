@@ -3,7 +3,7 @@ let http = require('http')
 
 let file = new static.Server('./dist')
 
-const PORT = 8080
+const PORT = 80
 
 http.createServer(function (request, response) {
   request.addListener('end', function () {
