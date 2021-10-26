@@ -7,6 +7,7 @@ const PORT = 80
 
 http.createServer(function (request, response) {
   request.addListener('end', function () {
+    console.error("DD: ENDPOINT")
     file.serve(request, response)
   }).resume()
 }).listen(PORT)
