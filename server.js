@@ -10,5 +10,5 @@ http.createServer(function (request, response) {
     console.error("DD: ENDPOINT")
     file.serve(request, response)
   }).resume()
-}).listen(PORT)
+}).listen(process.env.PORT || PORT)
 console.log(`Server started on port: ${PORT}`)
